@@ -16,7 +16,7 @@ NetDynamics allows to spawn up to 100,000 dynamic entities, efficiently process 
 
 How it works?
 --------
-
+The overall approach is based on the Entity Component System where an entity is just an identifier which decoupled from data and logic. NetDynamics is a client-server application which synchronizes visual representation of entities across connections. The server is serializing and transmitting to clients large batches of components that essentially are entity's data. The systems are used for logic and to process components for designated entities.
 
 Usage
 --------
