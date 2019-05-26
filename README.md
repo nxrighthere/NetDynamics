@@ -12,7 +12,7 @@ NetDynamics is a data-oriented networking playground for the reliable UDP transp
 
 Purpose
 --------
-NetDynamics allows to spawn up to 100,000 dynamic entities, efficiently process data, and render graphics using draw call batching. The application generates a huge amount of data for transfer over a network or on loopback using UDP transport that supports sequenced reliable/unreliable message delivery. The primary goal is to determine problematic spots, bottlenecks, or bugs in network transport and visualize it in real-time.
+NetDynamics allows to spawn up to 100,000 dynamic entities, efficiently process data, and render graphics using draw call batching. The application generates a huge amount of data for transfer over a network or on loopback using UDP transport that supports sequenced reliable/unreliable message delivery. The primary goal is to determine problematic spots, bottlenecks, or bugs in a network transport and visualize it in real-time.
 
 How it works?
 --------
