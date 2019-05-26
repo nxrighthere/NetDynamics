@@ -18,7 +18,9 @@ How it works?
 --------
 The overall approach is based on the Entity Component System where an entity is just an identifier which decoupled from data and logic. NetDynamics is a client-server application which synchronizes visual representation of entities across connections. The server is serializing and transmitting to clients large batches of components that essentially are entity's data. The systems are used for logic and to process components for designated entities.
 
-The server has full authority over all entities, clients can only participate in the population of a world by sending an appropriate message. The server can spawn entities as well, and also it can destroy them locally with further synchronization with clients. The server is sending state updates for entities at a fixed interval (20 updates per second by default). Clients are using interpolation to replicate the fluent movement of entities between state update based on the position and speed components.
+The server has full authority over all entities, clients can only participate in the population of a world by sending an appropriate message. The server can spawn entities as well, and also it can destroy them locally with further synchronization across clients. The server is sending state updates for entities at a fixed interval (20 updates per second by default). Clients are using interpolation to replicate the fluent movement of entities between state update based on the position and speed components.
+
+The application is designed to generate traffic exponentially with hundreds of thousands of network messages. It's not multi-threaded intentionally to notice performance degradation of the main thread when a network transport is under high-load, so single-threaded transport will always perform with higher latencies depending on the application's framerate.
 
 Usage
 --------
