@@ -401,17 +401,21 @@ int main(int argc, char *argv[]) {
 
 	// Data
 
-	position = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
-	speed = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
-	color = (Color*)calloc(NET_MAX_ENTITIES, sizeof(Color));
-	texture = RayLoadTexture("neon_circle.png");
+	if (error == NULL) {
+		position = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
+		speed = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
+		color = (Color*)calloc(NET_MAX_ENTITIES, sizeof(Color));
+		texture = RayLoadTexture("neon_circle.png");
 
-	#ifdef NETDYNAMICS_CLIENT
-		destination = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
+		#ifdef NETDYNAMICS_CLIENT
+			destination = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
+		#endif
+	}
 
-		uint32_t rtt = 0;
-	#elif NETDYNAMICS_SERVER
+	#ifdef NETDYNAMICS_SERVER
 		float sendInterval = 1.0f / settings.sendRate;
+	#elif NETDYNAMICS_CLIENT
+		uint32_t rtt = 0;
 	#endif
 
 	while (!RayWindowShouldClose()) {
@@ -646,14 +650,17 @@ int main(int argc, char *argv[]) {
 		enet_deinitialize();
 	}
 
-	free(position);
-	free(speed);
-	free(color);
+	if (error == NULL) {
+		free(position);
+		free(speed);
+		free(color);
 
-	#ifdef NETDYNAMICS_CLIENT
-		free(destination);
-	#endif
+		#ifdef NETDYNAMICS_CLIENT
+			free(destination);
+		#endif
 
-	RayUnloadTexture(texture);
+		RayUnloadTexture(texture);
+	}
+
 	RayCloseWindow();
 }
