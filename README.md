@@ -20,7 +20,7 @@ The overall approach is based on the Entity Component System where an entity is 
 
 The server has full authority over all entities, clients can only participate in the population of a world by sending an appropriate message. The server can spawn entities as well, and also it can destroy them locally with further synchronization across clients. The server is sending state updates for entities at a fixed interval (20 updates per second by default). Clients are using interpolation to replicate the fluent movement of entities between state updates based on the position and speed components.
 
-The application is designed to generate traffic exponentially with hundreds of thousands of network messages. It's not multi-threaded intentionally to notice performance degradation of the main thread when a network transport is under high-load, thus single-threaded transport will always perform with higher latencies depending on the application's framerate. Moving transport logic to a separate dedicated thread will solve this, but it's beyond the purpose of NetDynamics.
+The application is designed to generate traffic exponentially with hundreds of thousands of network messages. It's not multi-threaded intentionally to notice performance degradation of the main thread when a network transport is under high-load, thus a single-threaded transport will always perform with higher latencies depending on the application's framerate. Moving transport logic to a separate dedicated thread will solve this, but it's beyond the purpose of NetDynamics.
 
 Usage
 --------
