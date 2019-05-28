@@ -15,10 +15,10 @@
 \***************************************************************************/
 
 #include <math.h>
-#include "raylib/raylib.h" // github.com/raysan5/raylib
-#include "enet/enet.h" // github.com/nxrighthere/ENet-CSharp
-#include "binn/binn.h" // github.com/liteserver/binn
-#include "ini/ini.h" // github.com/benhoyt/inih
+#include "raylib/raylib.h" // https://github.com/raysan5/raylib
+#include "enet/enet.h" // https://github.com/nxrighthere/ENet-CSharp
+#include "binn/binn.h" // https://github.com/liteserver/binn
+#include "ini/ini.h" // https://github.com/benhoyt/inih
 
 #define HYPERNET 0
 #define ENET 1
@@ -166,7 +166,7 @@ static Vector2* destination;
 		color[entityRemote].a = 0;
 	}
 
-	inline static void entity_flush() {
+	inline static void entity_flush(void) {
 		entity = 0;
 		memset(position, 0, sizeof(Vector2));
 		memset(speed, 0, sizeof(Vector2));
