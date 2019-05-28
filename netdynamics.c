@@ -26,7 +26,7 @@
 
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
-#define VERSION_PATCH 0
+#define VERSION_PATCH 1
 
 #define NET_MAX_CLIENTS 32
 #define NET_MAX_CHANNELS 2
@@ -57,6 +57,9 @@ static const Color colors[] = {
 	{ 0, 220, 255, 255 },
 	{ 255, 255, 14, 255 }
 };
+
+static int screenWidth;
+static int screenHeight;
 
 static char* status;
 static char* error;
@@ -111,9 +114,6 @@ static Vector2* destination;
 	}
 
 	inline static void entity_move(float movementSpeed, float deltaTime) {
-		int screenWidth = RayGetScreenWidth();
-		int screenHeight = RayGetScreenHeight();
-
 		static const int textureOffset = 8;
 
 		for (uint32_t i = 0; i < entity; i++) {
@@ -345,6 +345,9 @@ int main(int argc, char *argv[]) {
 
 	RayInitWindow((int)settings.resolutionWidth, (int)settings.resolutionHeight, title);
 	RaySetTargetFPS((int)settings.framerateLimit);
+
+	screenWidth = RayGetScreenWidth();
+	screenHeight = RayGetScreenHeight();
 
 	const int fontSize = 25;
 	Font font = RayLoadFontEx("share_tech.ttf", fontSize, 0, 0);
