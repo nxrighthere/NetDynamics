@@ -19,6 +19,7 @@
 #include "enet/enet.h" // https://github.com/nxrighthere/ENet-CSharp
 #include "binn/binn.h" // https://github.com/liteserver/binn
 #include "ini/ini.h" // https://github.com/benhoyt/inih
+#include "jemalloc/jemalloc.h" // https://github.com/jemalloc/jemalloc
 
 #define HYPERNET 0
 #define ENET 1
@@ -179,7 +180,7 @@ static Vector2* destination;
 	inline static void message_send_all(uint8_t transport, void* server, uint8_t id, const Entity* entityLocal) {
 		bool reliable = false;
 
-		binn* data = binn_list(); // malloc
+		binn* data = binn_list();
 
 		binn_list_add_uint8(data, id);
 
@@ -213,7 +214,7 @@ static Vector2* destination;
 		if (transport == HYPERNET) {
 
 		} else if (transport == ENET) {
-			ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE); // malloc
+			ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
 			enet_host_broadcast((ENetHost*)server, 1, packet);
 		}
@@ -227,7 +228,7 @@ static Vector2* destination;
 inline static void message_send(uint8_t transport, void* client, uint8_t id, const Entity* entityLocal) {
 	bool reliable = false;
 
-	binn* data = binn_list(); // malloc
+	binn* data = binn_list();
 
 	binn_list_add_uint8(data, id);
 
@@ -256,7 +257,7 @@ inline static void message_send(uint8_t transport, void* client, uint8_t id, con
 	if (transport == HYPERNET) {
 
 	} else if (transport == ENET) {
-		ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE); // malloc
+		ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
 		enet_peer_send((ENetPeer*)client, 1, packet);
 	}
@@ -267,7 +268,7 @@ inline static void message_send(uint8_t transport, void* client, uint8_t id, con
 }
 
 inline static uint8_t message_receive(char* packet) {
-	binn* data = binn_open(packet); // malloc
+	binn* data = binn_open(packet);
 	uint8_t id = binn_list_uint8(data, 1);
 
 	if (id == NET_MESSAGE_SPAWN) {
@@ -350,6 +351,10 @@ int main(int argc, char *argv[]) {
 
 	RaySetTextureFilter(font.texture, FILTER_POINT);
 
+	// Serialization
+
+	binn_set_alloc_functions(je_malloc, je_realloc, je_free);
+
 	// Network
 
 	ENetHost* host = NULL;
@@ -367,7 +372,13 @@ int main(int argc, char *argv[]) {
 	} else if (settings.transport == ENET) {
 		name = "ENet";
 
-		if (enet_initialize() < 0)
+		ENetCallbacks callbacks = {
+			je_malloc,
+			je_free,
+			abort
+		};
+
+		if (enet_initialize_with_callbacks(enet_linked_version(), &callbacks) < 0)
 			error = "ENet initialization failed";
 
 		ENetAddress address = { 0 };
@@ -402,13 +413,13 @@ int main(int argc, char *argv[]) {
 	// Data
 
 	if (error == NULL) {
-		position = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
-		speed = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
-		color = (Color*)calloc(NET_MAX_ENTITIES, sizeof(Color));
+		position = (Vector2*)je_calloc(NET_MAX_ENTITIES, sizeof(Vector2));
+		speed = (Vector2*)je_calloc(NET_MAX_ENTITIES, sizeof(Vector2));
+		color = (Color*)je_calloc(NET_MAX_ENTITIES, sizeof(Color));
 		texture = RayLoadTexture("neon_circle.png");
 
 		#ifdef NETDYNAMICS_CLIENT
-			destination = (Vector2*)calloc(NET_MAX_ENTITIES, sizeof(Vector2));
+			destination = (Vector2*)je_calloc(NET_MAX_ENTITIES, sizeof(Vector2));
 		#endif
 	}
 
@@ -651,12 +662,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (error == NULL) {
-		free(position);
-		free(speed);
-		free(color);
+		je_free(position);
+		je_free(speed);
+		je_free(color);
 
 		#ifdef NETDYNAMICS_CLIENT
-			free(destination);
+			je_free(destination);
 		#endif
 
 		RayUnloadTexture(texture);
