@@ -179,7 +179,6 @@ static Vector2* destination;
 #ifdef NETDYNAMICS_SERVER
 	inline static void message_send_all(uint8_t transport, void* server, uint8_t id, const Entity* entityLocal) {
 		bool reliable = false;
-
 		binn* data = binn_list();
 
 		binn_list_add_uint8(data, id);
@@ -212,7 +211,7 @@ static Vector2* destination;
 		}
 
 		if (transport == HYPERNET) {
-
+			
 		} else if (transport == ENET) {
 			ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
@@ -227,7 +226,6 @@ static Vector2* destination;
 
 inline static void message_send(uint8_t transport, void* client, uint8_t id, const Entity* entityLocal) {
 	bool reliable = false;
-
 	binn* data = binn_list();
 
 	binn_list_add_uint8(data, id);
@@ -255,7 +253,7 @@ inline static void message_send(uint8_t transport, void* client, uint8_t id, con
 	}
 
 	if (transport == HYPERNET) {
-
+		
 	} else if (transport == ENET) {
 		ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
@@ -580,7 +578,7 @@ int main(int argc, char *argv[]) {
 			// Destroy
 			#ifdef NETDYNAMICS_SERVER
 				if (ENTITIES_EXIST()) {
-					if (RayIsMouseButtonDown(MOUSE_RIGHT_BUTTON) || RayIsKeyPressed(KEY_DELETE)) {
+					if (RayIsMouseButtonDown(MOUSE_RIGHT_BUTTON) || RayIsKeyPressed(KEY_BACKSPACE)) {
 						Entity entities = entity - NET_MAX_ENTITY_SPAWN;
 
 						entity_destroy(entities);
