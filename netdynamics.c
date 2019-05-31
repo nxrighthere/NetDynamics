@@ -15,11 +15,11 @@
 \***************************************************************************/
 
 #include <math.h>
+#include "jemalloc/jemalloc.h" // https://github.com/jemalloc/jemalloc
 #include "raylib/raylib.h" // https://github.com/raysan5/raylib
 #include "enet/enet.h" // https://github.com/nxrighthere/ENet-CSharp
 #include "binn/binn.h" // https://github.com/liteserver/binn
 #include "ini/ini.h" // https://github.com/benhoyt/inih
-#include "jemalloc/jemalloc.h" // https://github.com/jemalloc/jemalloc
 
 #define HYPERNET 0
 #define ENET 1
