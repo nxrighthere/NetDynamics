@@ -295,6 +295,7 @@ inline static uint8_t message_receive(char* packet) {
 static int ini_callback(void* user, const char* section, const char* name, const char* value) {
 	#define FIELD_MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
 	#define PARSE_INTEGER(v) strtoul(v, NULL, 10)
+	#define PARSE_STRING(v) strdup(v)
 
 	Settings* settings = (Settings*)user;
 
@@ -309,7 +310,7 @@ static int ini_callback(void* user, const char* section, const char* name, const
 	else if (FIELD_MATCH("Network", "Transport"))
 		settings->transport = (uint8_t)PARSE_INTEGER(value);
 	else if (FIELD_MATCH("Network", "IP"))
-		settings->ip = strdup(value);
+		settings->ip = PARSE_STRING(value);
 	else if (FIELD_MATCH("Network", "Port"))
 		settings->port = (uint16_t)PARSE_INTEGER(value);
 	else if (FIELD_MATCH("Network", "SendRate"))
@@ -367,8 +368,6 @@ int main(int argc, char *argv[]) {
 	char* name = NULL;
 
 	if (settings.transport == HYPERNET) {
-		name = "HyperNet";
-
 		
 	} else if (settings.transport == ENET) {
 		name = "ENet";
@@ -387,7 +386,7 @@ int main(int argc, char *argv[]) {
 		address.port = settings.port;
 
 		#ifdef NETDYNAMICS_SERVER
-			if ((host = enet_host_create(&address, NET_MAX_CLIENTS, NET_MAX_CHANNELS, 0, 0)) == NULL)
+			if ((host = enet_host_create(&address, NET_MAX_CLIENTS, NET_MAX_CHANNELS, 0, 0, 1024 * 1024)) == NULL)
 				error = string_host_failed;
 			else
 				status = string_listening;
@@ -395,7 +394,7 @@ int main(int argc, char *argv[]) {
 			if (enet_address_set_host(&address, settings.ip) < 0) {
 				error = string_address_failed;
 			} else {
-				if ((host = enet_host_create(NULL, 1, 0, 0, 0)) == NULL) {
+				if ((host = enet_host_create(NULL, 1, 0, 0, 0, 1024 * 1024)) == NULL) {
 					error = string_host_failed;
 				} else {
 					if ((peer = enet_host_connect(host, &address, NET_MAX_CHANNELS, 0)) == NULL)
@@ -523,7 +522,7 @@ int main(int argc, char *argv[]) {
 
 					if (connected > 0) {
 						if (settings.transport == HYPERNET) {
-
+							
 						} else if (settings.transport == ENET) {
 							enet_host_flush(host);
 
