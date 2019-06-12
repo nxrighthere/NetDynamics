@@ -321,7 +321,7 @@ static int ini_callback(void* user, const char* section, const char* name, const
 	return 1;
 }
 
-int main(int argc, char *argv[]) {
+int main(void) {
 	// Settings
 
 	Settings settings = { 0 };
