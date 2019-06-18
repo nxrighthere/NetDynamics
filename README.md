@@ -25,3 +25,5 @@ The application is designed to generate traffic exponentially with hundreds of t
 Usage
 --------
 [Download](https://github.com/nxrighthere/NetDynamics/releases) the application and set the desired parameters in the `settings.ini` file. Run the application, use the left mouse button on server or client to spawn entities, use the right mouse button on server to destroy entities.
+
+For testing the application's rendering and processing initial performance to get a visual difference in consumption of a frame time by networking logic, you can simply spawn entities on server without any connections.
