@@ -292,12 +292,12 @@ inline static uint8_t message_receive(char* packet) {
 
 // Callbacks
 
-static int ini_callback(void* user, const char* section, const char* name, const char* value) {
+static int ini_callback(void* data, const char* section, const char* name, const char* value) {
 	#define FIELD_MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
 	#define PARSE_INTEGER(v) strtoul(v, NULL, 10)
 	#define PARSE_STRING(v) strdup(v)
 
-	Settings* settings = (Settings*)user;
+	Settings* settings = (Settings*)data;
 
 	if (FIELD_MATCH("Display", "ResolutionWidth"))
 		settings->resolutionWidth = (uint16_t)PARSE_INTEGER(value);
@@ -368,6 +368,8 @@ int main(void) {
 	char* name = NULL;
 
 	if (settings.transport == HYPERNET) {
+		name = "HyperNet";
+
 		
 	} else if (settings.transport == ENET) {
 		name = "ENet";
@@ -551,7 +553,7 @@ int main(void) {
 
 					if (connected > 0) {
 						if (sendTime >= sendInterval) {
-							sendTime = sendTime - sendInterval;
+							sendTime -= sendInterval;
 
 							if (settings.transport == HYPERNET) {
 								
