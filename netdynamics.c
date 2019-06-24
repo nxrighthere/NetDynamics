@@ -114,16 +114,16 @@ static Vector2* destination;
 	}
 
 	inline static void entity_move(float movementSpeed, float deltaTime) {
-		static const int textureOffset = 8;
+		#define TEXTURE_OFFSET 8
 
 		for (uint32_t i = 0; i < entity; i++) {
 			position[i].x += speed[i].x * movementSpeed * deltaTime;
 			position[i].y += speed[i].y * movementSpeed * deltaTime;
 
-			if (((position[i].x + texture.width / 2 + textureOffset) > screenWidth) || ((position[i].x + texture.width / 2 - textureOffset) < 0))
+			if (((position[i].x + texture.width / 2 + TEXTURE_OFFSET) > screenWidth) || ((position[i].x + texture.width / 2 - TEXTURE_OFFSET) < 0))
 				speed[i].x *= -1;
 
-			if (((position[i].y + texture.height / 2 + textureOffset) > screenHeight) || ((position[i].y + texture.height / 2 - textureOffset) < 0))
+			if (((position[i].y + texture.height / 2 + TEXTURE_OFFSET) > screenHeight) || ((position[i].y + texture.height / 2 - TEXTURE_OFFSET) < 0))
 				speed[i].y *= -1;
 		}
 	}
