@@ -21,12 +21,12 @@
 #include "binn/binn.h" // https://github.com/liteserver/binn
 #include "ini/ini.h" // https://github.com/benhoyt/inih
 
-#define HYPERNET 0
-#define ENET 1
-
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
 #define VERSION_PATCH 1
+
+#define NET_TRANSPORT_HYPERNET 0
+#define NET_TRANSPORT_ENET 1
 
 #define NET_MAX_CLIENTS 32
 #define NET_MAX_CHANNELS 2
@@ -210,9 +210,9 @@ static Vector2* destination;
 			goto escape;
 		}
 
-		if (transport == HYPERNET) {
+		if (transport == NET_TRANSPORT_HYPERNET) {
 			
-		} else if (transport == ENET) {
+		} else if (transport == NET_TRANSPORT_ENET) {
 			ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
 			enet_host_broadcast((ENetHost*)server, 1, packet);
@@ -252,9 +252,9 @@ inline static void message_send(uint8_t transport, void* client, uint8_t id, con
 		goto escape;
 	}
 
-	if (transport == HYPERNET) {
+	if (transport == NET_TRANSPORT_HYPERNET) {
 		
-	} else if (transport == ENET) {
+	} else if (transport == NET_TRANSPORT_ENET) {
 		ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
 		enet_peer_send((ENetPeer*)client, 1, packet);
@@ -367,11 +367,10 @@ int main(void) {
 
 	char* name = NULL;
 
-	if (settings.transport == HYPERNET) {
+	if (settings.transport == NET_TRANSPORT_HYPERNET) {
 		name = "HyperNet";
 
-		
-	} else if (settings.transport == ENET) {
+	} else if (settings.transport == NET_TRANSPORT_ENET) {
 		name = "ENet";
 
 		ENetCallbacks callbacks = {
@@ -436,9 +435,9 @@ int main(void) {
 
 		if (error == NULL) {
 			// Transport
-			if (settings.transport == HYPERNET) {
+			if (settings.transport == NET_TRANSPORT_HYPERNET) {
 				
-			} else if (settings.transport == ENET) {
+			} else if (settings.transport == NET_TRANSPORT_ENET) {
 				static ENetEvent event = { 0 };
 
 				bool polled = false;
@@ -463,7 +462,7 @@ int main(void) {
 
 								if (ENTITIES_EXIST()) {
 									for (uint32_t i = 0; i <= entity; i++) {
-										message_send(ENET, event.peer, NET_MESSAGE_SPAWN, &i);
+										message_send(NET_TRANSPORT_ENET, event.peer, NET_MESSAGE_SPAWN, &i);
 									}
 								}
 							#elif NETDYNAMICS_CLIENT
@@ -493,7 +492,7 @@ int main(void) {
 							#ifdef NETDYNAMICS_SERVER
 								if (id == NET_MESSAGE_SPAWN) {
 									for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
-										message_send_all(ENET, host, NET_MESSAGE_SPAWN, &i);
+										message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
 									}
 								}
 							#endif
@@ -523,24 +522,24 @@ int main(void) {
 					entity_spawn(RayGetMousePosition(), NET_MAX_ENTITY_SPAWN);
 
 					if (connected > 0) {
-						if (settings.transport == HYPERNET) {
+						if (settings.transport == NET_TRANSPORT_HYPERNET) {
 							
-						} else if (settings.transport == ENET) {
+						} else if (settings.transport == NET_TRANSPORT_ENET) {
 							enet_host_flush(host);
 
 							for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
-								message_send_all(ENET, host, NET_MESSAGE_SPAWN, &i);
+								message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
 							}
 						}
 					}
 				#elif NETDYNAMICS_CLIENT
 					if (connected) {
-						if (settings.transport == HYPERNET) {
+						if (settings.transport == NET_TRANSPORT_HYPERNET) {
 							
-						} else if (settings.transport == ENET) {
+						} else if (settings.transport == NET_TRANSPORT_ENET) {
 							enet_host_flush(host);
 
-							message_send(ENET, peer, NET_MESSAGE_SPAWN, NULL);
+							message_send(NET_TRANSPORT_ENET, peer, NET_MESSAGE_SPAWN, NULL);
 						}
 					}
 				#endif
@@ -555,13 +554,13 @@ int main(void) {
 						if (sendTime >= sendInterval) {
 							sendTime -= sendInterval;
 
-							if (settings.transport == HYPERNET) {
+							if (settings.transport == NET_TRANSPORT_HYPERNET) {
 								
-							} else if (settings.transport == ENET) {
+							} else if (settings.transport == NET_TRANSPORT_ENET) {
 								enet_host_flush(host);
 
 								for (uint32_t i = 0; i <= entity; i++) {
-									message_send_all(ENET, host, NET_MESSAGE_MOVE, &i);
+									message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_MOVE, &i);
 								}
 							}
 						}
@@ -585,12 +584,12 @@ int main(void) {
 						entity_destroy(entities);
 
 						if (connected > 0) {
-							if (settings.transport == HYPERNET) {
+							if (settings.transport == NET_TRANSPORT_HYPERNET) {
 								
-							} else if (settings.transport == ENET) {
+							} else if (settings.transport == NET_TRANSPORT_ENET) {
 								enet_host_flush(host);
 
-								message_send_all(ENET, host, NET_MESSAGE_DESTROY, &entities);
+								message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_DESTROY, &entities);
 							}
 						}
 					}
@@ -643,9 +642,9 @@ int main(void) {
 		RayEndDrawing();
 	}
 
-	if (settings.transport == HYPERNET) {
+	if (settings.transport == NET_TRANSPORT_HYPERNET) {
 		
-	} else if (settings.transport == ENET) {
+	} else if (settings.transport == NET_TRANSPORT_ENET) {
 		if (host != NULL) {
 			#ifdef NETDYNAMICS_SERVER
 				for (uint32_t i = 0; i < host->peerCount; i++) {
