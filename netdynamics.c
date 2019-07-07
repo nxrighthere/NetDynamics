@@ -177,7 +177,7 @@ static Vector2* destination;
 #endif
 
 #ifdef NETDYNAMICS_SERVER
-	inline static void message_send_all(uint8_t transport, void* server, uint8_t id, const Entity* entityLocal) {
+	inline static void message_send_to_all(uint8_t transport, void* server, uint8_t id, const Entity* entityLocal) {
 		bool reliable = false;
 		binn* data = binn_list();
 
@@ -492,7 +492,7 @@ int main(void) {
 							#ifdef NETDYNAMICS_SERVER
 								if (id == NET_MESSAGE_SPAWN) {
 									for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
-										message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
+										message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
 									}
 								}
 							#endif
@@ -528,7 +528,7 @@ int main(void) {
 							enet_host_flush(host);
 
 							for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
-								message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
+								message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
 							}
 						}
 					}
@@ -560,7 +560,7 @@ int main(void) {
 								enet_host_flush(host);
 
 								for (uint32_t i = 0; i <= entity; i++) {
-									message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_MOVE, &i);
+									message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_MOVE, &i);
 								}
 							}
 						}
@@ -589,7 +589,7 @@ int main(void) {
 							} else if (settings.transport == NET_TRANSPORT_ENET) {
 								enet_host_flush(host);
 
-								message_send_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_DESTROY, &entities);
+								message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_DESTROY, &entities);
 							}
 						}
 					}
