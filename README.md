@@ -6,8 +6,8 @@
 
 NetDynamics is a data-oriented networking playground for the reliable UDP transports. The application was created for stress testing and debugging a proprietary networking library [HyperNet](https://github.com/users/nxrighthere/projects/1), but it also supports [ENet](https://github.com/nxrighthere/ENet-CSharp) as an open-source alternative. You can see it in action [here](https://mega.nz/#!gc8TUQrQ!Ad18ZJCZtrRu6SJACMXJWm3izGEfgoiG4TdoGDso_io).
 
-<p align="center"> 
-  ![gif](https://media.giphy.com/media/XEfdHjad7IYULdJM7g/giphy.gif)
+<p align="center">
+  <img src="https://media.giphy.com/media/XEfdHjad7IYULdJM7g/giphy.gif">
 </p>
 
 Purpose
