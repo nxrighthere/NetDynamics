@@ -461,7 +461,7 @@ int main(void) {
 								enet_peer_ping_interval(event.peer, 250);
 
 								if (ENTITIES_EXIST()) {
-									for (uint32_t i = 0; i <= entity; i++) {
+									for (uint32_t i = 0; i < entity; i++) {
 										message_send(NET_TRANSPORT_ENET, event.peer, NET_MESSAGE_SPAWN, &i);
 									}
 								}
@@ -559,14 +559,14 @@ int main(void) {
 							} else if (settings.transport == NET_TRANSPORT_ENET) {
 								enet_host_flush(host);
 
-								for (uint32_t i = 0; i <= entity; i++) {
+								for (uint32_t i = 0; i < entity; i++) {
 									message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_MOVE, &i);
 								}
 							}
 						}
 					}
 				#elif NETDYNAMICS_CLIENT
-					for (uint32_t i = 0; i <= entity; i++) {
+					for (uint32_t i = 0; i < entity; i++) {
 						if (destination[i].x == 0.0f && destination[i].y == 0.0f)
 							continue;
 
