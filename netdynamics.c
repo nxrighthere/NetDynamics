@@ -392,7 +392,7 @@ int main(void) {
 			else
 				status = string_listening;
 		#elif NETDYNAMICS_CLIENT
-			if (enet_address_set_host(&address, settings.ip) < 0) {
+			if (enet_address_set_hostname(&address, settings.ip) < 0) {
 				error = string_address_failed;
 			} else {
 				if ((host = enet_host_create(NULL, 1, 0, 0, 0, 1024 * 1024)) == NULL) {
