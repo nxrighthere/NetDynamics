@@ -23,7 +23,7 @@
 
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
-#define VERSION_PATCH 2
+#define VERSION_PATCH 3
 
 #define NET_TRANSPORT_HYPERNET 0
 #define NET_TRANSPORT_ENET 1
@@ -461,7 +461,7 @@ int main(void) {
 								enet_peer_ping_interval(event.peer, 250);
 
 								if (ENTITIES_EXIST()) {
-									for (uint32_t i = 0; i < entity; i++) {
+									for (uint32_t i = 0; i <= entity; i++) {
 										message_send(NET_TRANSPORT_ENET, event.peer, NET_MESSAGE_SPAWN, &i);
 									}
 								}
