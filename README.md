@@ -4,7 +4,7 @@
 
 [![GitHub release](https://img.shields.io/github/release/nxrighthere/NetDynamics.svg)](https://github.com/nxrighthere/NetDynamics/releases) [![PayPal](https://drive.google.com/uc?id=1OQrtNBVJehNVxgPf6T6yX1wIysz1ElLR)](https://www.paypal.me/nxrighthere) [![Bountysource](https://drive.google.com/uc?id=19QRobscL8Ir2RL489IbVjcw3fULfWS_Q)](https://salt.bountysource.com/checkout/amount?team=nxrighthere) [![Coinbase](https://drive.google.com/uc?id=1LckuF-IAod6xmO9yF-jhTjq1m-4f7cgF)](https://commerce.coinbase.com/checkout/03e11816-b6fc-4e14-b974-29a1d0886697)
 
-NetDynamics is a data-oriented networking playground for the reliable UDP transports. The application was created for stress testing and debugging a proprietary networking library [HyperNet](https://github.com/users/nxrighthere/projects/1), but it also supports [ENet](https://github.com/nxrighthere/ENet-CSharp) as an open-source alternative. You can see it in action [here](https://mega.nz/#!gc8TUQrQ!Ad18ZJCZtrRu6SJACMXJWm3izGEfgoiG4TdoGDso_io).
+NetDynamics is a data-oriented networking playground for the reliable UDP transports. The application was created for stress testing and debugging a proprietary networking library HyperNet, but it also supports [ENet](https://github.com/nxrighthere/ENet-CSharp) as an open-source alternative. You can see it in action [here](https://mega.nz/#!gc8TUQrQ!Ad18ZJCZtrRu6SJACMXJWm3izGEfgoiG4TdoGDso_io).
 
 <p align="center">
   <img src="https://media.giphy.com/media/XEfdHjad7IYULdJM7g/giphy.gif">
