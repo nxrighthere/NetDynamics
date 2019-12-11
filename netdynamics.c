@@ -106,10 +106,12 @@ static Vector2* destination;
 		uint32_t entities = entity + quantity;
 
 		for (uint32_t i = entity; i < entities; i++) {
-			entity++;
-			position[i] = positionComponent;
-			speed[i] = (Vector2){ (float)RayGetRandomValue(-300, 300) / 60.0f, (float)RayGetRandomValue(-300, 300) / 60.0f };
-			color[i] = colors[RayGetRandomValue(0, sizeof(colors) / sizeof(Color) - 1)];
+			if (entity < NET_MAX_ENTITIES) {
+				entity++;
+				position[i] = positionComponent;
+				speed[i] = (Vector2){ (float)RayGetRandomValue(-300, 300) / 60.0f, (float)RayGetRandomValue(-300, 300) / 60.0f };
+				color[i] = colors[RayGetRandomValue(0, sizeof(colors) / sizeof(Color) - 1)];
+			}
 		}
 	}
 
