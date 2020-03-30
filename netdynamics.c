@@ -2,15 +2,15 @@
 * Module Name:  netdynamics.c
 * Project:      NetDynamics
 * Copyright (c) 2019 Stanislav Denisov
-* 
+*
 * Data-oriented networking playground for the reliable UDP transports
-* 
+*
 * This source is subject to the Microsoft Public License.
 * See https://opensource.org/licenses/MS-PL
 * All other rights reserved.
-* 
-* THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, 
-* EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED 
+*
+* THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+* EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
 * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 \***************************************************************************/
 
@@ -47,7 +47,10 @@ typedef struct _Settings {
 	char* ip;
 	uint16_t port;
 	uint8_t sendRate;
+	uint32_t redundantBytes;
 } Settings;
+
+static uint8_t redundantBuffer[1024 * 1024];
 
 static const Color colors[] = {
 	{ 250, 250, 250, 255 },
@@ -57,6 +60,9 @@ static const Color colors[] = {
 	{ 0, 220, 255, 255 },
 	{ 255, 255, 14, 255 }
 };
+
+
+static Settings settings;
 
 static int screenWidth;
 static int screenHeight;
@@ -69,6 +75,9 @@ static char* error;
 #elif NETDYNAMICS_SERVER
 	static uint32_t connected;
 #endif
+
+static ENetHost* enetHost;
+static ENetPeer* enetPeer;
 
 // Strings
 
@@ -179,7 +188,7 @@ static Vector2* destination;
 #endif
 
 #ifdef NETDYNAMICS_SERVER
-	inline static void message_send_to_all(uint8_t transport, void* server, uint8_t id, const Entity* entityLocal) {
+	inline static void message_send_to_all(uint8_t transport, uint8_t id, const Entity* entityLocal) {
 		bool reliable = false;
 		binn* data = binn_list();
 
@@ -212,12 +221,15 @@ static Vector2* destination;
 			goto escape;
 		}
 
+		if (settings.redundantBytes > 0)
+			binn_list_add_blob(data, redundantBuffer, settings.redundantBytes);
+
 		if (transport == NET_TRANSPORT_HYPERNET) {
-			
+
 		} else if (transport == NET_TRANSPORT_ENET) {
 			ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
-			enet_host_broadcast((ENetHost*)server, 1, packet);
+			enet_host_broadcast(enetHost, 1, packet);
 		}
 
 		escape:
@@ -254,8 +266,11 @@ inline static void message_send(uint8_t transport, void* client, uint8_t id, con
 		goto escape;
 	}
 
+	if (settings.redundantBytes > 0)
+		binn_list_add_blob(data, redundantBuffer, settings.redundantBytes);
+
 	if (transport == NET_TRANSPORT_HYPERNET) {
-		
+
 	} else if (transport == NET_TRANSPORT_ENET) {
 		ENetPacket* packet = enet_packet_create(binn_ptr(data), binn_size(data), !reliable ? ENET_PACKET_FLAG_NONE : ENET_PACKET_FLAG_RELIABLE);
 
@@ -317,6 +332,8 @@ static int ini_callback(void* data, const char* section, const char* name, const
 		settings->port = (uint16_t)PARSE_INTEGER(value);
 	else if (FIELD_MATCH("Network", "SendRate"))
 		settings->sendRate = (uint8_t)PARSE_INTEGER(value);
+	else if (FIELD_MATCH("Network", "RedundantBytes"))
+		settings->redundantBytes = (uint32_t)PARSE_INTEGER(value);
 	else
 		return 0;
 
@@ -325,8 +342,6 @@ static int ini_callback(void* data, const char* section, const char* name, const
 
 int main(void) {
 	// Settings
-
-	Settings settings = { 0 };
 
 	if (ini_parse("settings.ini", ini_callback, &settings) < 0)
 		abort();
@@ -359,18 +374,22 @@ int main(void) {
 
 	binn_set_alloc_functions(je_malloc, je_realloc, je_free);
 
+	if (settings.redundantBytes > 0) {
+		if (settings.redundantBytes > sizeof(redundantBuffer))
+			settings.redundantBytes = (uint32_t)sizeof(redundantBuffer);
+
+		for (uint32_t i = 0; i < settings.redundantBytes; i++) {
+			redundantBuffer[i] = i % sizeof(uint8_t);
+		}
+	}
+
 	// Network
-
-	ENetHost* host = NULL;
-
-	#if NETDYNAMICS_CLIENT
-		ENetPeer* peer = NULL;
-	#endif
 
 	char* name = NULL;
 
 	if (settings.transport == NET_TRANSPORT_HYPERNET) {
-		name = "HyperNet";
+		name = "SwarmNet";
+
 
 	} else if (settings.transport == NET_TRANSPORT_ENET) {
 		name = "ENet";
@@ -381,32 +400,33 @@ int main(void) {
 			abort
 		};
 
-		if (enet_initialize_with_callbacks(enet_linked_version(), &callbacks) < 0)
+		if (enet_initialize_with_callbacks(enet_linked_version(), &callbacks) < 0) {
 			error = "ENet initialization failed";
+		} else {
+			ENetAddress address = { 0 };
 
-		ENetAddress address = { 0 };
+			address.port = settings.port;
 
-		address.port = settings.port;
-
-		#ifdef NETDYNAMICS_SERVER
-			if ((host = enet_host_create(&address, NET_MAX_CLIENTS, NET_MAX_CHANNELS, 0, 0, 1024 * 1024)) == NULL)
-				error = string_host_failed;
-			else
-				status = string_listening;
-		#elif NETDYNAMICS_CLIENT
-			if (enet_address_set_hostname(&address, settings.ip) < 0) {
-				error = string_address_failed;
-			} else {
-				if ((host = enet_host_create(NULL, 1, 0, 0, 0, 1024 * 1024)) == NULL) {
+			#ifdef NETDYNAMICS_SERVER
+				if ((enetHost = enet_host_create(&address, NET_MAX_CLIENTS, NET_MAX_CHANNELS, 0, 0, 1024 * 1024)) == NULL)
 					error = string_host_failed;
+				else
+					status = string_listening;
+			#elif NETDYNAMICS_CLIENT
+				if (enet_address_set_hostname(&address, settings.ip) < 0) {
+					error = string_address_failed;
 				} else {
-					if ((peer = enet_host_connect(host, &address, NET_MAX_CHANNELS, 0)) == NULL)
-						error = string_connection_failed;
-					else
-						status = string_connecting;
+					if ((enetHost = enet_host_create(NULL, 1, 0, 0, 0, 1024 * 1024)) == NULL) {
+						error = string_host_failed;
+					} else {
+						if ((enetPeer = enet_host_connect(enetHost, &address, NET_MAX_CHANNELS, 0)) == NULL)
+							error = string_connection_failed;
+						else
+							status = string_connecting;
+					}
 				}
-			}
-		#endif
+			#endif
+		}
 	} else {
 		error = "Set the correct number of a network transport";
 	}
@@ -438,15 +458,15 @@ int main(void) {
 		if (error == NULL) {
 			// Transport
 			if (settings.transport == NET_TRANSPORT_HYPERNET) {
-				
+
 			} else if (settings.transport == NET_TRANSPORT_ENET) {
 				static ENetEvent event = { 0 };
 
 				bool polled = false;
 
 				while (!polled) {
-					if (enet_host_check_events(host, &event) <= 0) {
-						if (enet_host_service(host, &event, 0) <= 0)
+					if (enet_host_check_events(enetHost, &event) <= 0) {
+						if (enet_host_service(enetHost, &event, 0) <= 0)
 							break;
 
 						polled = true;
@@ -458,7 +478,7 @@ int main(void) {
 
 						case ENET_EVENT_TYPE_CONNECT: {
 							#ifdef NETDYNAMICS_SERVER
-								connected = host->connectedPeers;
+								connected = enetHost->connectedPeers;
 
 								enet_peer_ping_interval(event.peer, 250);
 
@@ -477,7 +497,7 @@ int main(void) {
 
 						case ENET_EVENT_TYPE_DISCONNECT: case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT: {
 							#ifdef NETDYNAMICS_SERVER
-								connected = host->connectedPeers;
+								connected = enetHost->connectedPeers;
 							#elif NETDYNAMICS_CLIENT
 								connected = false;
 								status = string_disconnected;
@@ -489,12 +509,12 @@ int main(void) {
 						}
 
 						case ENET_EVENT_TYPE_RECEIVE: {
-							uint8_t id = message_receive(event.packet->data);
+							uint8_t id = message_receive((char*)event.packet->data);
 
 							#ifdef NETDYNAMICS_SERVER
 								if (id == NET_MESSAGE_SPAWN) {
 									for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
-										message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
+										message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_SPAWN, &i);
 									}
 								}
 							#endif
@@ -507,7 +527,7 @@ int main(void) {
 				}
 
 				#ifdef NETDYNAMICS_CLIENT
-					rtt = peer->smoothedRoundTripTime;
+					rtt = enetPeer->roundTripTime;
 				#endif
 			}
 
@@ -525,23 +545,23 @@ int main(void) {
 
 					if (connected > 0) {
 						if (settings.transport == NET_TRANSPORT_HYPERNET) {
-							
+
 						} else if (settings.transport == NET_TRANSPORT_ENET) {
-							enet_host_flush(host);
+							enet_host_flush(enetHost);
 
 							for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
-								message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_SPAWN, &i);
+								message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_SPAWN, &i);
 							}
 						}
 					}
 				#elif NETDYNAMICS_CLIENT
 					if (connected) {
 						if (settings.transport == NET_TRANSPORT_HYPERNET) {
-							
-						} else if (settings.transport == NET_TRANSPORT_ENET) {
-							enet_host_flush(host);
 
-							message_send(NET_TRANSPORT_ENET, peer, NET_MESSAGE_SPAWN, NULL);
+						} else if (settings.transport == NET_TRANSPORT_ENET) {
+							enet_host_flush(enetHost);
+
+							message_send(NET_TRANSPORT_ENET, enetPeer, NET_MESSAGE_SPAWN, NULL);
 						}
 					}
 				#endif
@@ -557,12 +577,12 @@ int main(void) {
 							sendTime -= sendInterval;
 
 							if (settings.transport == NET_TRANSPORT_HYPERNET) {
-								
+
 							} else if (settings.transport == NET_TRANSPORT_ENET) {
-								enet_host_flush(host);
+								enet_host_flush(enetHost);
 
 								for (uint32_t i = 0; i < entity; i++) {
-									message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_MOVE, &i);
+									message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_MOVE, &i);
 								}
 							}
 						}
@@ -587,11 +607,11 @@ int main(void) {
 
 						if (connected > 0) {
 							if (settings.transport == NET_TRANSPORT_HYPERNET) {
-								
-							} else if (settings.transport == NET_TRANSPORT_ENET) {
-								enet_host_flush(host);
 
-								message_send_to_all(NET_TRANSPORT_ENET, host, NET_MESSAGE_DESTROY, &entities);
+							} else if (settings.transport == NET_TRANSPORT_ENET) {
+								enet_host_flush(enetHost);
+
+								message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_DESTROY, &entities);
 							}
 						}
 					}
@@ -645,20 +665,20 @@ int main(void) {
 	}
 
 	if (settings.transport == NET_TRANSPORT_HYPERNET) {
-		
+
 	} else if (settings.transport == NET_TRANSPORT_ENET) {
-		if (host != NULL) {
+		if (enetHost != NULL) {
 			#ifdef NETDYNAMICS_SERVER
-				for (uint32_t i = 0; i < host->peerCount; i++) {
-					enet_peer_disconnect_now(&host->peers[i], 0);
+				for (uint32_t i = 0; i < enetHost->peerCount; i++) {
+					enet_peer_disconnect_now(&enetHost->peers[i], 0);
 				}
 			#elif NETDYNAMICS_CLIENT
-				if (peer != NULL)
-					enet_peer_disconnect_now(peer, 0);
+				if (enetPeer != NULL)
+					enet_peer_disconnect_now(enetPeer, 0);
 			#endif
 
-			enet_host_flush(host);
-			enet_host_destroy(host);
+			enet_host_flush(enetHost);
+			enet_host_destroy(enetHost);
 		}
 
 		enet_deinitialize();
