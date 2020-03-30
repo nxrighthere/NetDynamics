@@ -388,7 +388,7 @@ int main(void) {
 	char* name = NULL;
 
 	if (settings.transport == NET_TRANSPORT_HYPERNET) {
-		name = "SwarmNet";
+		name = "HyperNet";
 
 
 	} else if (settings.transport == NET_TRANSPORT_ENET) {
