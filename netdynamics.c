@@ -50,7 +50,7 @@ typedef struct _Settings {
 	uint32_t redundantBytes;
 } Settings;
 
-static uint8_t redundantBuffer[1024 * 1024];
+static uint8_t redundancyBuffer[1024 * 1024];
 
 static const Color colors[] = {
 	{ 250, 250, 250, 255 },
@@ -60,7 +60,6 @@ static const Color colors[] = {
 	{ 0, 220, 255, 255 },
 	{ 255, 255, 14, 255 }
 };
-
 
 static Settings settings;
 
@@ -222,7 +221,7 @@ static Vector2* destination;
 		}
 
 		if (settings.redundantBytes > 0)
-			binn_list_add_blob(data, redundantBuffer, settings.redundantBytes);
+			binn_list_add_blob(data, redundancyBuffer, settings.redundantBytes);
 
 		if (transport == NET_TRANSPORT_HYPERNET) {
 
@@ -267,7 +266,7 @@ inline static void message_send(uint8_t transport, void* client, uint8_t id, con
 	}
 
 	if (settings.redundantBytes > 0)
-		binn_list_add_blob(data, redundantBuffer, settings.redundantBytes);
+		binn_list_add_blob(data, redundancyBuffer, settings.redundantBytes);
 
 	if (transport == NET_TRANSPORT_HYPERNET) {
 
@@ -375,11 +374,11 @@ int main(void) {
 	binn_set_alloc_functions(je_malloc, je_realloc, je_free);
 
 	if (settings.redundantBytes > 0) {
-		if (settings.redundantBytes > sizeof(redundantBuffer))
-			settings.redundantBytes = (uint32_t)sizeof(redundantBuffer);
+		if (settings.redundantBytes > sizeof(redundancyBuffer))
+			settings.redundantBytes = (uint32_t)sizeof(redundancyBuffer);
 
 		for (uint32_t i = 0; i < settings.redundantBytes; i++) {
-			redundantBuffer[i] = i % sizeof(uint8_t);
+			redundancyBuffer[i] = i % sizeof(uint8_t);
 		}
 	}
 
