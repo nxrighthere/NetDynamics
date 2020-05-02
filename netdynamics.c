@@ -75,6 +75,8 @@ static char* error;
 	static uint32_t connected;
 #endif
 
+// ENet
+
 static ENetHost* enetHost;
 static ENetPeer* enetPeer;
 
