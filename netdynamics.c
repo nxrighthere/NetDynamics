@@ -23,7 +23,7 @@
 
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
-#define VERSION_PATCH 5
+#define VERSION_PATCH 6
 
 #define NET_TRANSPORT_HYPERNET 0
 #define NET_TRANSPORT_ENET 1
@@ -155,16 +155,16 @@ static Vector2* destination;
 	inline static void entity_move(Vector2* positionComponent, Vector2 destinationComponent, float maxDistanceDelta, float movementSpeed, float deltaTime) {
 		float toVectorX = destinationComponent.x - positionComponent->x;
 		float toVectorY = destinationComponent.y - positionComponent->y;
-		float squaredDistance = toVectorX * toVectorX + toVectorY * toVectorY;
+		float squareDistance = toVectorX * toVectorX + toVectorY * toVectorY;
 		float step = maxDistanceDelta * movementSpeed * deltaTime;
 
-		if (squaredDistance == 0.0f || (step >= 0.0f && squaredDistance <= step * step)) {
+		if (squareDistance == 0.0f || (step >= 0.0f && squareDistance <= step * step)) {
 			*positionComponent = destinationComponent;
 
 			return;
 		}
 
-		float distance = sqrtf(squaredDistance);
+		float distance = sqrtf(squareDistance);
 
 		*positionComponent = (Vector2){ positionComponent->x + toVectorX / distance * step, positionComponent->y + toVectorY / distance * step };
 	}
@@ -659,6 +659,8 @@ int main(void) {
 				RayDrawTextEx(font, RayFormatText("MESSAGES PER SECOND %u", connected * entity * settings.sendRate), (Vector2){ 10, 175 }, fontSize, 0, WHITE);
 			#elif NETDYNAMICS_CLIENT
 				RayDrawTextEx(font, RayFormatText("RTT %u", rtt), (Vector2){ 10, 125 }, fontSize, 0, WHITE);
+				RayDrawTextEx(font, RayFormatText("Packets sent %u", enetPeer->totalPacketsSent), (Vector2){ 10, 150 }, fontSize, 0, WHITE);
+				RayDrawTextEx(font, RayFormatText("Packets lost %u", enetPeer->totalPacketsLost), (Vector2){ 10, 175 }, fontSize, 0, WHITE);
 			#endif
 		}
 
