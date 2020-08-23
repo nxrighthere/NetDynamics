@@ -15,6 +15,8 @@
 \***************************************************************************/
 
 #include <math.h>
+#include "aws/common/clock.h" // https://github.com/awslabs/aws-c-common
+#include "aws/common/thread.h"
 #include "jemalloc/jemalloc.h" // https://github.com/jemalloc/jemalloc
 #include "raylib/raylib.h" // https://github.com/raysan5/raylib
 #include "enet/enet.h" // https://github.com/nxrighthere/ENet-CSharp
@@ -23,7 +25,7 @@
 
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
-#define VERSION_PATCH 6
+#define VERSION_PATCH 7
 
 #define NET_TRANSPORT_HYPERNET 0
 #define NET_TRANSPORT_ENET 1
@@ -34,11 +36,12 @@
 #define NET_MAX_ENTITY_SPAWN 10
 #define NET_MAX_ENTITY_SPEED 80.0f
 
-#define NET_MESSAGE_SPAWN 1
-#define NET_MESSAGE_MOVE 2
-#define NET_MESSAGE_DESTROY 3
+#define NET_MESSAGE_SPAWN 0xA
+#define NET_MESSAGE_MOVE 0xB
+#define NET_MESSAGE_DESTROY 0xC
 
 typedef struct _Settings {
+	uint8_t headlessMode;
 	uint16_t resolutionWidth;
 	uint16_t resolutionHeight;
 	uint8_t framerateLimit;
@@ -63,8 +66,10 @@ static const Color colors[] = {
 
 static Settings settings;
 
-static int screenWidth;
-static int screenHeight;
+static Font font;
+static const int fontSize = 25;
+static const int textureWidth = 32;
+static const int textureHeight = 32;
 
 static char* status;
 static char* error;
@@ -132,10 +137,10 @@ static Vector2* destination;
 			position[i].x += speed[i].x * movementSpeed * deltaTime;
 			position[i].y += speed[i].y * movementSpeed * deltaTime;
 
-			if (((position[i].x + texture.width / 2 + TEXTURE_OFFSET) > screenWidth) || ((position[i].x + texture.width / 2 - TEXTURE_OFFSET) < 0))
+			if (((position[i].x + textureWidth / 2 + TEXTURE_OFFSET) > settings.resolutionWidth) || ((position[i].x + textureWidth / 2 - TEXTURE_OFFSET) < 0))
 				speed[i].x *= -1;
 
-			if (((position[i].y + texture.height / 2 + TEXTURE_OFFSET) > screenHeight) || ((position[i].y + texture.height / 2 - TEXTURE_OFFSET) < 0))
+			if (((position[i].y + textureHeight / 2 + TEXTURE_OFFSET) > settings.resolutionHeight) || ((position[i].y + textureHeight / 2 - TEXTURE_OFFSET) < 0))
 				speed[i].y *= -1;
 		}
 	}
@@ -308,6 +313,24 @@ inline static uint8_t message_receive(char* packet) {
 	return id;
 }
 
+inline static float get_frame_time(void) {
+	if (!settings.headlessMode)
+		return RayGetFrameTime();
+
+	static uint64_t currentTime;
+	static uint64_t lastTime;
+	static float deltaTime;
+
+	if (aws_high_res_clock_get_ticks(&currentTime) == AWS_OP_SUCCESS) {
+		if (lastTime > 0)
+			deltaTime = ((currentTime - lastTime) / 1000000.0f) / 1000.0f;
+
+		lastTime = currentTime;
+	}
+
+	return deltaTime;
+}
+
 // Callbacks
 
 static int ini_callback(void* data, const char* section, const char* name, const char* value) {
@@ -317,7 +340,9 @@ static int ini_callback(void* data, const char* section, const char* name, const
 
 	Settings* settings = (Settings*)data;
 
-	if (FIELD_MATCH("Display", "ResolutionWidth"))
+	if (FIELD_MATCH("Display", "HeadlessMode"))
+		settings->headlessMode = (uint8_t)PARSE_INTEGER(value);
+	else if (FIELD_MATCH("Display", "ResolutionWidth"))
 		settings->resolutionWidth = (uint16_t)PARSE_INTEGER(value);
 	else if (FIELD_MATCH("Display", "ResolutionHeight"))
 		settings->resolutionHeight = (uint16_t)PARSE_INTEGER(value);
@@ -347,7 +372,7 @@ int main(void) {
 	if (ini_parse("settings.ini", ini_callback, &settings) < 0)
 		abort();
 
-	// Window
+	// Main
 
 	char* title = NULL;
 
@@ -355,21 +380,25 @@ int main(void) {
 		title = "NetDynamics (Server)";
 	#elif NETDYNAMICS_CLIENT
 		title = "NetDynamics (Client)";
+
+		settings.headlessMode = 0;
 	#endif
 
-	if (settings.vsync > 0)
-		RaySetConfigFlags(FLAG_VSYNC_HINT);
+	if (settings.headlessMode) {
+		static struct aws_allocator allocator;
 
-	RayInitWindow((int)settings.resolutionWidth, (int)settings.resolutionHeight, title);
-	RaySetTargetFPS((int)settings.framerateLimit);
+		aws_common_library_init(&allocator);
+	} else {
+		if (settings.vsync > 0)
+			RaySetConfigFlags(FLAG_VSYNC_HINT);
 
-	screenWidth = RayGetScreenWidth();
-	screenHeight = RayGetScreenHeight();
+		RayInitWindow((int)settings.resolutionWidth, (int)settings.resolutionHeight, title);
+		RaySetTargetFPS((int)settings.framerateLimit);
 
-	const int fontSize = 25;
-	Font font = RayLoadFontEx("share_tech.ttf", fontSize, 0, 0);
+		font = RayLoadFontEx("share_tech.ttf", fontSize, 0, 0);
 
-	RaySetTextureFilter(font.texture, FILTER_POINT);
+		RaySetTextureFilter(font.texture, FILTER_POINT);
+	}
 
 	// Serialization
 
@@ -440,7 +469,9 @@ int main(void) {
 		position = (Vector2*)je_calloc(NET_MAX_ENTITIES, sizeof(Vector2));
 		speed = (Vector2*)je_calloc(NET_MAX_ENTITIES, sizeof(Vector2));
 		color = (Color*)je_calloc(NET_MAX_ENTITIES, sizeof(Color));
-		texture = RayLoadTexture("neon_circle.png");
+
+		if (!settings.headlessMode)
+			texture = RayLoadTexture("neon_circle.png");
 
 		#ifdef NETDYNAMICS_CLIENT
 			destination = (Vector2*)je_calloc(NET_MAX_ENTITIES, sizeof(Vector2));
@@ -453,8 +484,8 @@ int main(void) {
 		uint32_t rtt = 0;
 	#endif
 
-	while (!RayWindowShouldClose()) {
-		float deltaTime = RayGetFrameTime();
+	while (settings.headlessMode || !RayWindowShouldClose()) {
+		float deltaTime = get_frame_time();
 
 		if (error == NULL) {
 			// Transport
@@ -480,8 +511,6 @@ int main(void) {
 						case ENET_EVENT_TYPE_CONNECT: {
 							#ifdef NETDYNAMICS_SERVER
 								connected = enetHost->connectedPeers;
-
-								enet_peer_ping_interval(event.peer, 250);
 
 								if (ENTITIES_EXIST()) {
 									for (uint32_t i = 0; i <= entity; i++) {
@@ -540,32 +569,34 @@ int main(void) {
 			#endif
 
 			// Spawn
-			if (RayIsMouseButtonDown(MOUSE_LEFT_BUTTON) || RayIsKeyPressed(KEY_SPACE)) {
-				#ifdef NETDYNAMICS_SERVER
-					entity_spawn(RayGetMousePosition(), NET_MAX_ENTITY_SPAWN);
+			if (!settings.headlessMode) {
+				if (RayIsMouseButtonDown(MOUSE_LEFT_BUTTON) || RayIsKeyPressed(KEY_SPACE)) {
+					#ifdef NETDYNAMICS_SERVER
+						entity_spawn(RayGetMousePosition(), NET_MAX_ENTITY_SPAWN);
 
-					if (connected > 0) {
-						if (settings.transport == NET_TRANSPORT_HYPERNET) {
+						if (connected > 0) {
+							if (settings.transport == NET_TRANSPORT_HYPERNET) {
 
-						} else if (settings.transport == NET_TRANSPORT_ENET) {
-							enet_host_flush(enetHost);
+							} else if (settings.transport == NET_TRANSPORT_ENET) {
+								enet_host_flush(enetHost);
 
-							for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
-								message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_SPAWN, &i);
+								for (uint32_t i = entity - NET_MAX_ENTITY_SPAWN; i <= entity; i++) {
+									message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_SPAWN, &i);
+								}
 							}
 						}
-					}
-				#elif NETDYNAMICS_CLIENT
-					if (connected) {
-						if (settings.transport == NET_TRANSPORT_HYPERNET) {
+					#elif NETDYNAMICS_CLIENT
+						if (connected) {
+							if (settings.transport == NET_TRANSPORT_HYPERNET) {
 
-						} else if (settings.transport == NET_TRANSPORT_ENET) {
-							enet_host_flush(enetHost);
+							} else if (settings.transport == NET_TRANSPORT_ENET) {
+								enet_host_flush(enetHost);
 
-							message_send(NET_TRANSPORT_ENET, enetPeer, NET_MESSAGE_SPAWN, NULL);
+								message_send(NET_TRANSPORT_ENET, enetPeer, NET_MESSAGE_SPAWN, NULL);
+							}
 						}
-					}
-				#endif
+					#endif
+				}
 			}
 
 			// Move
@@ -600,19 +631,21 @@ int main(void) {
 
 			// Destroy
 			#ifdef NETDYNAMICS_SERVER
-				if (ENTITIES_EXIST()) {
-					if (RayIsMouseButtonDown(MOUSE_RIGHT_BUTTON) || RayIsKeyPressed(KEY_BACKSPACE)) {
-						Entity entities = entity - NET_MAX_ENTITY_SPAWN;
+				if (!settings.headlessMode) {
+					if (ENTITIES_EXIST()) {
+						if (RayIsMouseButtonDown(MOUSE_RIGHT_BUTTON) || RayIsKeyPressed(KEY_BACKSPACE)) {
+							Entity entities = entity - NET_MAX_ENTITY_SPAWN;
 
-						entity_destroy(entities);
+							entity_destroy(entities);
 
-						if (connected > 0) {
-							if (settings.transport == NET_TRANSPORT_HYPERNET) {
+							if (connected > 0) {
+								if (settings.transport == NET_TRANSPORT_HYPERNET) {
 
-							} else if (settings.transport == NET_TRANSPORT_ENET) {
-								enet_host_flush(enetHost);
+								} else if (settings.transport == NET_TRANSPORT_ENET) {
+									enet_host_flush(enetHost);
 
-								message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_DESTROY, &entities);
+									message_send_to_all(NET_TRANSPORT_ENET, NET_MESSAGE_DESTROY, &entities);
+								}
 							}
 						}
 					}
@@ -620,51 +653,60 @@ int main(void) {
 			#endif
 		}
 
-		// Render
-		RayBeginDrawing();
-		RayClearBackground(CLITERAL{ 20, 0, 48, 255 });
+		if (!settings.headlessMode) {
+			// Render
+			RayBeginDrawing();
+			RayClearBackground(CLITERAL{ 20, 0, 48, 255 });
 
-		if (error != NULL) {
-			// Error
-			RayDrawTextEx(font, RayFormatText("ERROR %s", error), (Vector2){ 10, 10 }, fontSize, 0, WHITE);
-		} else {
-			// Entities
-			if (ENTITIES_EXIST()) {
-				for (uint32_t i = 0; i < entity; i++) {
-					RayDrawTexture(texture, position[i].x, position[i].y, color[i]);
-				}
-			}
-
-			// Stats
-			static int fps = 0;
-			static int counter = 0;
-			static int refreshRate = 20;
-
-			if (counter < refreshRate) {
-				counter++;
+			if (error != NULL) {
+				// Error
+				RayDrawTextEx(font, RayFormatText("ERROR %s", error), (Vector2){ 10, 10 }, fontSize, 0, WHITE);
 			} else {
-				fps = RayGetFPS();
-				refreshRate = fps;
-				counter = 0;
+				// Entities
+				if (ENTITIES_EXIST()) {
+					for (uint32_t i = 0; i < entity; i++) {
+						RayDrawTexture(texture, position[i].x, position[i].y, color[i]);
+					}
+				}
+
+				// Stats
+				static int fps = 0;
+				static int counter = 0;
+				static int refreshRate = 20;
+
+				if (counter < refreshRate) {
+					counter++;
+				} else {
+					fps = RayGetFPS();
+					refreshRate = fps;
+					counter = 0;
+				}
+
+				RayDrawTextEx(font, RayFormatText("FPS %i", fps), (Vector2){ 10, 10 }, fontSize, 0, WHITE);
+				RayDrawTextEx(font, RayFormatText("ENTITIES %i", entity), (Vector2){ 10, 35 }, fontSize, 0, WHITE);
+				RayDrawTextEx(font, name, (Vector2){ 10, 75 }, fontSize, 0, WHITE);
+				RayDrawTextEx(font, RayFormatText("STATUS %s", status), (Vector2){ 10, 100 }, fontSize, 0, WHITE);
+
+				#ifdef NETDYNAMICS_SERVER
+					RayDrawTextEx(font, RayFormatText("CONNECTED CLIENTS %u/%u", connected, NET_MAX_CLIENTS), (Vector2){ 10, 125 }, fontSize, 0, WHITE);
+					RayDrawTextEx(font, RayFormatText("SEND RATE %u", settings.sendRate), (Vector2){ 10, 150 }, fontSize, 0, WHITE);
+					RayDrawTextEx(font, RayFormatText("MESSAGES PER SECOND %u", connected * entity * settings.sendRate), (Vector2){ 10, 175 }, fontSize, 0, WHITE);
+				#elif NETDYNAMICS_CLIENT
+					if (settings.transport == NET_TRANSPORT_HYPERNET) {
+
+					} else if (settings.transport == NET_TRANSPORT_ENET) {
+						RayDrawTextEx(font, RayFormatText("RTT %u", rtt), (Vector2){ 10, 125 }, fontSize, 0, WHITE);
+						RayDrawTextEx(font, RayFormatText("Packets sent %u", enetPeer->totalPacketsSent), (Vector2){ 10, 150 }, fontSize, 0, WHITE);
+						RayDrawTextEx(font, RayFormatText("Packets lost %u", enetPeer->totalPacketsLost), (Vector2){ 10, 175 }, fontSize, 0, WHITE);
+						RayDrawTextEx(font, RayFormatText("Packets throttle %.1f%%", enet_peer_get_packets_throttle(enetPeer)), (Vector2){ 10, 200 }, fontSize, 0, WHITE);
+					}
+				#endif
 			}
 
-			RayDrawTextEx(font, RayFormatText("FPS %i", fps), (Vector2){ 10, 10 }, fontSize, 0, WHITE);
-			RayDrawTextEx(font, RayFormatText("ENTITIES %i", entity), (Vector2){ 10, 35 }, fontSize, 0, WHITE);
-			RayDrawTextEx(font, name, (Vector2){ 10, 75 }, fontSize, 0, WHITE);
-			RayDrawTextEx(font, RayFormatText("STATUS %s", status), (Vector2){ 10, 100 }, fontSize, 0, WHITE);
-
-			#ifdef NETDYNAMICS_SERVER
-				RayDrawTextEx(font, RayFormatText("CONNECTED CLIENTS %u/%u", connected, NET_MAX_CLIENTS), (Vector2){ 10, 125 }, fontSize, 0, WHITE);
-				RayDrawTextEx(font, RayFormatText("SEND RATE %u", settings.sendRate), (Vector2){ 10, 150 }, fontSize, 0, WHITE);
-				RayDrawTextEx(font, RayFormatText("MESSAGES PER SECOND %u", connected * entity * settings.sendRate), (Vector2){ 10, 175 }, fontSize, 0, WHITE);
-			#elif NETDYNAMICS_CLIENT
-				RayDrawTextEx(font, RayFormatText("RTT %u", rtt), (Vector2){ 10, 125 }, fontSize, 0, WHITE);
-				RayDrawTextEx(font, RayFormatText("Packets sent %u", enetPeer->totalPacketsSent), (Vector2){ 10, 150 }, fontSize, 0, WHITE);
-				RayDrawTextEx(font, RayFormatText("Packets lost %u", enetPeer->totalPacketsLost), (Vector2){ 10, 175 }, fontSize, 0, WHITE);
-			#endif
+			RayEndDrawing();
+		} else {
+			aws_thread_current_sleep((1000 / settings.framerateLimit) * 1000000);
 		}
-
-		RayEndDrawing();
 	}
 
 	if (settings.transport == NET_TRANSPORT_HYPERNET) {
@@ -696,8 +738,12 @@ int main(void) {
 			je_free(destination);
 		#endif
 
-		RayUnloadTexture(texture);
+		if (!settings.headlessMode)
+			RayUnloadTexture(texture);
 	}
 
-	RayCloseWindow();
+	if (settings.headlessMode)
+		aws_common_library_clean_up();
+	else
+		RayCloseWindow();
 }
