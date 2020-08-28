@@ -76,6 +76,7 @@ static char* error;
 
 #ifdef NETDYNAMICS_CLIENT
 	static bool connected;
+	static float worstLag;
 #elif NETDYNAMICS_SERVER
 	static uint32_t connected;
 #endif
@@ -300,6 +301,20 @@ inline static uint8_t message_receive(char* packet) {
 		#endif
 	} else if (id == NET_MESSAGE_MOVE) {
 		#ifdef NETDYNAMICS_CLIENT
+			static uint64_t currentLag;
+			static uint64_t lastLag;
+
+			if (aws_high_res_clock_get_ticks(&currentLag) == AWS_OP_SUCCESS) {
+				if (lastLag > 0) {
+					float lag = ((currentLag - lastLag) / 1000000.0f) / 1000.0f;
+
+					if (lag > worstLag)
+						worstLag = lag;
+				}
+
+				lastLag = currentLag;
+			}
+
 			entity_update((Entity)binn_list_uint32(data, 2), (Vector2){ binn_list_float(data, 3), binn_list_float(data, 4) }, (Vector2){ binn_list_float(data, 5), binn_list_float(data, 6) });
 		#endif
 	} else if (id == NET_MESSAGE_DESTROY) {
@@ -699,6 +714,7 @@ int main(void) {
 						RayDrawTextEx(font, RayFormatText("Packets sent %u", enetPeer->totalPacketsSent), (Vector2){ 10, 150 }, fontSize, 0, WHITE);
 						RayDrawTextEx(font, RayFormatText("Packets lost %u", enetPeer->totalPacketsLost), (Vector2){ 10, 175 }, fontSize, 0, WHITE);
 						RayDrawTextEx(font, RayFormatText("Packets throttle %.1f%%", enet_peer_get_packets_throttle(enetPeer)), (Vector2){ 10, 200 }, fontSize, 0, WHITE);
+						RayDrawTextEx(font, RayFormatText("Worst lag %.2f ms", worstLag), (Vector2){ 10, 225 }, fontSize, 0, WHITE);
 					}
 				#endif
 			}
