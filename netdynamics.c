@@ -71,8 +71,8 @@ static const int fontSize = 25;
 static const int textureWidth = 32;
 static const int textureHeight = 32;
 
-static char* status;
-static char* error;
+static const char* status;
+static const char* error;
 
 #ifdef NETDYNAMICS_CLIENT
 	static bool connected;
@@ -88,16 +88,16 @@ static ENetPeer* enetPeer;
 
 // Strings
 
-static char* string_listening = "Listening for connections";
-static char* string_connecting = "Connecting to server...";
-static char* string_connected = "Connected to server";
-static char* string_disconnected = "Disconnected from server";
-static char* string_server_failed = "Server creation failed";
-static char* string_client_failed = "Client creation failed";
-static char* string_host_failed = "Host creation failed";
-static char* string_address_failed = "Address assignment failed";
-static char* string_listening_failed = "Server listening failed";
-static char* string_connection_failed = "Connection failed";
+static const char* string_listening = "Listening for connections";
+static const char* string_connecting = "Connecting to server...";
+static const char* string_connected = "Connected to server";
+static const char* string_disconnected = "Disconnected from server";
+static const char* string_server_failed = "Server creation failed";
+static const char* string_client_failed = "Client creation failed";
+static const char* string_host_failed = "Host creation failed";
+static const char* string_address_failed = "Address assignment failed";
+static const char* string_listening_failed = "Server listening failed";
+static const char* string_connection_failed = "Connection failed";
 
 // Entities
 
@@ -545,6 +545,7 @@ int main(void) {
 								connected = enetHost->connectedPeers;
 							#elif NETDYNAMICS_CLIENT
 								connected = false;
+								worstLag = 0.0f;
 								status = string_disconnected;
 
 								entity_flush();
