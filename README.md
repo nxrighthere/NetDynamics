@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/kOArjco.png" alt="alt logo">
 </p>
 
-NetDynamics is a data-oriented networking playground for the reliable UDP transports. The application was created for stress testing and debugging a proprietary networking library, but it also supports [ENet](https://github.com/nxrighthere/ENet-CSharp) as an open-source alternative. You can see it in action [here](https://drive.google.com/file/d/1Z8bj-Ek4s0b2bqf9Jpa_H4ph-9SNpndf/view?usp=sharing).
+NetDynamics is a data-oriented networking playground for the reliable UDP transports. The application was created for stress testing and debugging a proprietary networking library, but it also supports [ENet](https://github.com/nxrighthere/ENet-CSharp) as an open-source alternative.
 
 <p align="center">
   <img src="https://media.giphy.com/media/XEfdHjad7IYULdJM7g/giphy.gif">
