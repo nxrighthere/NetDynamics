@@ -381,6 +381,10 @@ static int ini_callback(void* data, const char* section, const char* name, const
 	return 1;
 }
 
+static uint64_t checksum_callback(const ENetBuffer* buffers, int bufferCount) {
+	return enet_crc64(buffers, bufferCount);
+}
+
 int main(void) {
 	// Settings
 
@@ -471,6 +475,10 @@ int main(void) {
 					}
 				}
 			#endif
+
+			if (enetHost != NULL) {
+				enet_host_set_checksum_callback(enetHost, checksum_callback);
+			}
 		}
 	} else {
 		error = "Set the correct number of a network transport";
